@@ -253,9 +253,9 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
             if (data){
                 //判断是微信还是朋友圈  朋友圈的话还是用原来代码
                 if (!aScene){
-                    WXMediaMessage *message = [WXMediaMessage message];
-                    NSString *filePath = [[NSBundle mainBundle] pathForResource:@"res6thumb" ofType:@"png"];
-                    [message setThumbImage:[UIImage imageWithData:[NSData dataWithContentsOfFile:filePath]]];
+                WXMediaMessage *message = [WXMediaMessage message];
+		NSData *thumb = [NSData dataWithContentsOfURL:[NSURL URLWithString:aData[@"titlepicUrl"]]];
+		[message setThumbImage:[UIImage imageWithData:thumb]];
                     WXEmoticonObject *ext = [WXEmoticonObject object];
                     ext.emoticonData = data;
                     message.mediaObject = ext;
