@@ -246,27 +246,48 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
         } else if ([type isEqualToString:RCTWXShareTypeImageUrl] ||
                    [type isEqualToString:RCTWXShareTypeImageFile] ||
                    [type isEqualToString:RCTWXShareTypeImageResource]) {
-            NSURL *url = [NSURL URLWithString:aData[RCTWXShareImageUrl]];
-            NSURLRequest *imageRequest = [NSURLRequest requestWithURL:url];
-            [self.bridge.imageLoader loadImageWithURLRequest:imageRequest callback:^(NSError *error, UIImage *image) {
-                if (image == nil){
-                    callback(@[@"fail to load image resource"]);
-                } else {
-                    WXImageObject *imageObject = [WXImageObject object];
-                    imageObject.imageData = UIImagePNGRepresentation(image);
-                    
-                    [self shareToWeixinWithMediaMessage:aScene
-                                                  Title:title
-                                            Description:description
-                                                 Object:imageObject
-                                             MessageExt:messageExt
-                                          MessageAction:messageAction
-                                             ThumbImage:aThumbImage
-                                               MediaTag:mediaTagName
-                                               callBack:callback];
-                    
+     NSURL *url = [NSURL URLWithString:aData[RCTWXShareImageUrl]];
+             NSURLRequest *imageRequest = [NSURLRequest requestWithURL:url];
+         //源码改动
+            NSData *data = [NSData dataWithContentsOfURL:url];
+            if (data){
+                //判断是微信还是朋友圈  朋友圈的话还是用原来代码
+                if (!aScene){
+                    WXMediaMessage *message = [WXMediaMessage message];
+                    NSString *filePath = [[NSBundle mainBundle] pathForResource:@"res6thumb" ofType:@"png"];
+                    [message setThumbImage:[UIImage imageWithData:[NSData dataWithContentsOfFile:filePath]]];
+                    WXEmoticonObject *ext = [WXEmoticonObject object];
+                    ext.emoticonData = data;
+                    message.mediaObject = ext;
+                    SendMessageToWXReq* req = [[SendMessageToWXReq alloc] init];
+                    req.bText = NO;
+                    req.message = message;
+                    req.scene = aScene;
+                    BOOL success = [WXApi sendReq:req];
+                    callback(@[success ? [NSNull null] : INVOKE_FAILED]);
+                }else{
+                    [self.bridge.imageLoader loadImageWithURLRequest:imageRequest callback:^(NSError *error, UIImage *image) {
+                        if (image == nil){
+                           // callback(@[@"fail to load image resource"]);
+                        } else {
+                            WXImageObject *imageObject = [WXImageObject object];
+                            imageObject.imageData = UIImagePNGRepresentation(image);
+                        
+                            [self shareToWeixinWithMediaMessage:aScene
+                                                          Title:title
+                                                    Description:description
+                                                         Object:imageObject
+                                                     MessageExt:messageExt
+                                                  MessageAction:messageAction
+                                                     ThumbImage:aThumbImage
+                                                       MediaTag:mediaTagName
+                                                       callBack:callback];
+                        }
+                    }];
                 }
-            }];
+            }else{
+                callback(@[@"fail to load image resource"]);
+            }
         } else if ([type isEqualToString:RCTWXShareTypeFile]) {
             NSString * filePath = aData[@"filePath"];
             NSString * fileExtension = aData[@"fileExtension"];
